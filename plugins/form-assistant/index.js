@@ -216,9 +216,12 @@ const getApplicableChanges = (changes, fields, form, candidatesByType) =>
       : !valuesMatch(currentValue, change.value);
   });
 
+const MAX_HISTORY_TURNS = 10;
+
 const createAssistantChat = ({ context, globals, client }) => {
   const { data } = context;
   const relationCandidatesCache = new Map();
+  const history = [];
   const chat = document.createElement('div');
   chat.className = 'ai-form-assistant-chat';
   chat.innerHTML = `
@@ -415,11 +418,14 @@ const createAssistantChat = ({ context, globals, client }) => {
         fields: fieldsForRequest,
         message,
         model,
+        history,
       });
       appendMessage(
         'assistant',
         response.reply || 'No response text was returned.',
       );
+      history.push({ message, assistantText: response.assistantText });
+      if (history.length > MAX_HISTORY_TURNS) history.shift();
       pendingChanges = getApplicableChanges(
         response.changes,
         getFields(context.data.contentType),

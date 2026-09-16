@@ -17,7 +17,7 @@ The chat is available in the sidebar of every editable content-object form (it d
 
 Proposed changes are never saved automatically. Review the proposed field values, select the changes to keep, and use **Apply selected changes**. The normal Flotiq form save action is still required to persist the object.
 
-The sidebar keeps its conversation, typed draft, and pending proposals when Flotiq rerenders the form after validation. Each open form has a separate chat session.
+The sidebar keeps its conversation, typed draft, and pending proposals when Flotiq rerenders the form after validation. Each open form has a separate chat session, and prior messages and replies in that session are sent back to OpenAI as context on each new request (bounded to the last 10 turns), so follow-ups like "make it shorter" work.
 
 ## Default prompts
 
@@ -101,5 +101,4 @@ Host `dist/index.js` and `dist/plugin-manifest.json` over HTTPS, then replace th
 
 Ideas for future work on this plugin, not yet implemented:
 
-- **Chat memory within the current conversation.** Today each message is sent to OpenAI on its own; the visible history is UI-only (see "The assistant has no memory between messages" above). Accumulate the turns of the open chat session (keyed by `formUniqueKey`, already used for caching) and send them as prior messages/context on each request, so follow-ups like "make it shorter" work.
 - **Detailed OpenAI error.** Failures currently collapse to generic messages (e.g. "OpenAI request failed."). Showing the non-key-revealing part of the error (rate limit vs. invalid key vs. network) would speed up troubleshooting.
