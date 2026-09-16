@@ -1,5 +1,7 @@
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 
+export const DEFAULT_MODEL = 'gpt-4.1-mini';
+
 const getResponseText = (response) => {
   if (typeof response.output_text === 'string') return response.output_text;
 
@@ -15,6 +17,7 @@ export const requestAssistantResponse = async ({
   formValues,
   fields,
   message,
+  model,
 }) => {
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: 'POST',
@@ -23,7 +26,7 @@ export const requestAssistantResponse = async ({
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4.1-mini',
+      model: model || DEFAULT_MODEL,
       instructions: [
         'You are an assistant editing one Flotiq content form.',
         'Use only fields defined in the provided schema.',

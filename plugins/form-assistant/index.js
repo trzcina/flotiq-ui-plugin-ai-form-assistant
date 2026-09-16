@@ -264,7 +264,9 @@ const createAssistantChat = ({ context, globals }) => {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const message = textarea.value.trim();
-    const apiKey = getSettings(globals.getPluginSettings).openAiApiKey;
+    const { openAiApiKey: apiKey, model } = getSettings(
+      globals.getPluginSettings,
+    );
     if (!message || !apiKey) {
       status.textContent = apiKey
         ? 'Write a message before sending it.'
@@ -286,6 +288,7 @@ const createAssistantChat = ({ context, globals }) => {
         formValues: currentData.form.getValues(),
         fields,
         message,
+        model,
       });
       appendMessage(
         'assistant',
