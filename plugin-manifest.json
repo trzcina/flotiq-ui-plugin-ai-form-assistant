@@ -1,0 +1,9 @@
+{
+  "id": "flotiq.ai-form-assistant",
+  "name": "AI Form Assistant",
+  "description": "An OpenAI-powered sidebar chat that proposes approved changes to the current Flotiq content form.",
+  "version": "1.0.0",
+  "repository": "https://github.com/trzcina/flotiq-ui-plugin-ai-form-assistant",
+  "url": "https://localhost:3053/index.js",
+  "permissions": []
+}
