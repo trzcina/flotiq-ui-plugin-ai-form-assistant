@@ -17,7 +17,7 @@ The chat is available in the sidebar of every editable content-object form (it d
 
 Proposed changes are never saved automatically. Review the proposed field values, select the changes to keep, and use **Apply selected changes**. The normal Flotiq form save action is still required to persist the object.
 
-The sidebar keeps its conversation, typed draft, and pending proposals when Flotiq rerenders the form after validation. Each open form has a separate chat session.
+The sidebar keeps its conversation, typed draft, and pending proposals when Flotiq rerenders the form after validation. Each open form has a separate chat session, and prior messages and replies in that session are sent back to OpenAI as context on each new request (bounded to the last 10 turns), so follow-ups like "make it shorter" work.
 
 ## Default prompts
 
@@ -34,6 +34,8 @@ The assistant sends the Content Type Definition schema and field configuration t
 
 For `select` fields, including fields nested in lists, the proposal must match one of the configured options.
 
+For relation and media fields, the plugin fetches a short list of existing candidate objects through the Flotiq API client and sends that list to OpenAI; the assistant can only pick from those candidates and can never invent a related object. Uploading a new media file is not supported — only existing media library objects can be selected.
+
 ![AI Assistant proposing a discount for an existing product](docs/example1.png)
 
 ## OpenAI API key
@@ -42,11 +44,11 @@ The key is stored in plugin settings and used directly by the browser when a mes
 
 ## Requests to OpenAI
 
-The plugin calls the OpenAI Responses API (`/v1/responses`) directly from the browser with a hardcoded model (`gpt-4.1-mini`); it is not configurable in plugin settings. Changing the model requires editing `common/openai.js`.
+The plugin calls the OpenAI Responses API (`/v1/responses`) directly from the browser. The model defaults to `gpt-4.1-mini` and can be overridden per-plugin-instance with the **OpenAI model** setting.
 
 ## Flotiq permissions
 
-`plugin-manifest.json` declares no permissions (`"permissions": []`). The plugin never calls the Flotiq API client — it only reads the current form values and Content Type Definition from the `flotiq.form.sidebar-panel::add` event payload, and writes proposed values back through `FormApi.setFieldValue`.
+`plugin-manifest.json` requests read-only access to content objects (`CO`, `ctdName: "*"`, plus an explicit `_media` entry) so it can fetch candidate related objects for relation and media fields. It reads the current form values and Content Type Definition from the `flotiq.form.sidebar-panel::add` event payload, and writes proposed values back through `FormApi.setFieldValue`.
 
 ## AI agent guidance
 
@@ -99,7 +101,4 @@ Host `dist/index.js` and `dist/plugin-manifest.json` over HTTPS, then replace th
 
 Ideas for future work on this plugin, not yet implemented:
 
-- **Configurable model.** The OpenAI model is currently hardcoded to `gpt-4.1-mini` in `common/openai.js`. Add a `model` field to plugin settings (with a sane default) so it can be changed without editing code.
-- **Chat memory within the current conversation.** Today each message is sent to OpenAI on its own; the visible history is UI-only (see "The assistant has no memory between messages" above). Accumulate the turns of the open chat session (keyed by `formUniqueKey`, already used for caching) and send them as prior messages/context on each request, so follow-ups like "make it shorter" work.
-- **Relation field support.** Proposing values for relation fields needs a list of candidate related objects to choose from, which the model doesn't have today. This should go through the Flotiq API client
 - **Detailed OpenAI error.** Failures currently collapse to generic messages (e.g. "OpenAI request failed."). Showing the non-key-revealing part of the error (rate limit vs. invalid key vs. network) would speed up troubleshooting.

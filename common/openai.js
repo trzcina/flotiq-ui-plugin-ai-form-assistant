@@ -1,5 +1,7 @@
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 
+export const DEFAULT_MODEL = 'gpt-4.1-mini';
+
 const getResponseText = (response) => {
   if (typeof response.output_text === 'string') return response.output_text;
 
@@ -15,6 +17,8 @@ export const requestAssistantResponse = async ({
   formValues,
   fields,
   message,
+  model,
+  history = [],
 }) => {
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: 'POST',
@@ -23,20 +27,35 @@ export const requestAssistantResponse = async ({
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4.1-mini',
+      model: model || DEFAULT_MODEL,
       instructions: [
         'You are an assistant editing one Flotiq content form.',
         'Use only fields defined in the provided schema.',
-        'Do not create, delete, save, or submit content.',
         'Return only valid JSON with this exact shape:',
         '{"reply":"string","changes":[{"field":"fieldName","valueJson":"JSON-encoded value","reason":"string"}]}',
         'For every change, encode the new field value with JSON.stringify and put the result in valueJson.',
         'For select fields, use only values listed in their options configuration, including nested fields.',
+        'For relation fields with a candidates list, valueJson is a JSON array of ids from that list only.',
+        'Never invent a relation id or use the {type,dataUrl} shape.',
+        'If no candidate matches what the user asked for, omit that field from changes entirely.',
+        'Only propose an empty array for a relation field when the user explicitly asked to clear it.',
         'For floating-point number fields, use no more than two decimal places.',
         'Do not include a change when its proposed value is equal to the current field value.',
         'Use an empty changes array when no form change is needed.',
+        'Earlier user/assistant turns are prior conversation context only.',
+        'Only the latest user turn carries the current formValues/fields JSON to act on.',
+        'Never repeat a change from an earlier turn; each reply is a fresh proposal about current formValues.',
       ].join(' '),
-      input: JSON.stringify({ formValues, fields, message }),
+      input: [
+        ...history.flatMap(({ message: turnMessage, assistantText }) => [
+          { role: 'user', content: turnMessage },
+          { role: 'assistant', content: assistantText },
+        ]),
+        {
+          role: 'user',
+          content: JSON.stringify({ formValues, fields, message }),
+        },
+      ],
       text: {
         format: {
           type: 'json_schema',
@@ -87,6 +106,7 @@ export const requestAssistantResponse = async ({
         ...change,
         value: JSON.parse(valueJson),
       })),
+      assistantText: text,
     };
   } catch {
     throw new Error(

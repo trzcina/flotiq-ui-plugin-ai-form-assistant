@@ -4,7 +4,7 @@ import cssString from 'inline:./styles/style.css';
 import { registerFormAssistant } from './form-assistant';
 import { registerPluginSettings } from './settings';
 
-registerFn(pluginInfo, (handler, _, globals) => {
+registerFn(pluginInfo, (handler, client, globals) => {
   /**
    * Add plugin styles to the head of the document
    */
@@ -15,6 +15,6 @@ registerFn(pluginInfo, (handler, _, globals) => {
     document.head.appendChild(style);
   }
 
-  registerFormAssistant(handler, globals, pluginInfo);
+  registerFormAssistant(handler, client, globals, pluginInfo);
   registerPluginSettings(handler);
 });

@@ -1,3 +1,5 @@
+import { DEFAULT_MODEL } from '../common/openai.js';
+
 export const registerPluginSettings = (handler) => {
   handler.on('flotiq.plugins.manage::form-schema', () => ({
     schema: {
@@ -14,6 +16,9 @@ export const registerPluginSettings = (handler) => {
               openAiApiKey: {
                 type: 'string',
                 minLength: 1,
+              },
+              model: {
+                type: 'string',
               },
               defaultPrompts: {
                 type: 'array',
@@ -40,7 +45,7 @@ export const registerPluginSettings = (handler) => {
         additionalProperties: false,
       },
       metaDefinition: {
-        order: ['openAiApiKey', 'defaultPrompts'],
+        order: ['openAiApiKey', 'model', 'defaultPrompts'],
         propertiesConfig: {
           openAiApiKey: {
             label: 'OpenAI API key',
@@ -49,6 +54,12 @@ export const registerPluginSettings = (handler) => {
               'The key is used from your browser when you send a message.',
             inputType: 'text',
             isPassword: true,
+          },
+          model: {
+            label: 'OpenAI model',
+            unique: false,
+            helpText: `Defaults to \`${DEFAULT_MODEL}\` when left empty.`,
+            inputType: 'text',
           },
           defaultPrompts: {
             label: 'Default prompts',
