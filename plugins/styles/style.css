@@ -1,0 +1,228 @@
+:root {
+  --ai-assistant-ink: #0f172a;
+  --ai-assistant-muted: #64748b;
+  --ai-assistant-line: #e2e8f0;
+  --ai-assistant-surface: #ffffff;
+  --ai-assistant-subtle-surface: #f8fafc;
+  --ai-assistant-user-surface: #eff6ff;
+  --ai-assistant-assistant-surface: #f1f5f9;
+  --ai-assistant-accent: #2563eb;
+  --ai-assistant-accent-hover: #1d4ed8;
+  --ai-assistant-focus: #60a5fa;
+}
+
+.dark {
+  --ai-assistant-ink: #f8fafc;
+  --ai-assistant-muted: #94a3b8;
+  --ai-assistant-line: #334155;
+  --ai-assistant-surface: #020617;
+  --ai-assistant-subtle-surface: #0f172a;
+  --ai-assistant-user-surface: #172554;
+  --ai-assistant-assistant-surface: #1e293b;
+  --ai-assistant-accent: #3b82f6;
+  --ai-assistant-accent-hover: #60a5fa;
+  --ai-assistant-focus: #93c5fd;
+}
+
+.ai-form-assistant-panel {
+  border: 1px solid var(--ai-assistant-line);
+  border-radius: 8px;
+  background: var(--ai-assistant-surface);
+  color: var(--ai-assistant-ink);
+  padding: 16px;
+}
+
+.ai-form-assistant-panel h2,
+.ai-form-assistant-changes h3 {
+  color: var(--ai-assistant-ink);
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.ai-form-assistant-panel p {
+  color: var(--ai-assistant-muted);
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0 0 14px;
+}
+
+.ai-form-assistant-send,
+.ai-form-assistant-apply {
+  border: 2px solid var(--ai-assistant-accent);
+  border-radius: 8px;
+  background: var(--ai-assistant-accent);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.ai-form-assistant-send {
+  flex-shrink: 0;
+}
+
+.ai-form-assistant-send:hover,
+.ai-form-assistant-apply:hover {
+  background: var(--ai-assistant-accent-hover);
+  border-color: var(--ai-assistant-accent-hover);
+}
+
+.ai-form-assistant-send:focus-visible,
+.ai-form-assistant-apply:focus-visible,
+.ai-form-assistant-composer textarea:focus-visible {
+  outline: 3px solid var(--ai-assistant-focus);
+  outline-offset: 2px;
+}
+
+.ai-form-assistant-send:disabled,
+.ai-form-assistant-prompt:disabled,
+.ai-form-assistant-composer textarea:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.ai-form-assistant-chat {
+  color: var(--ai-assistant-ink);
+  display: grid;
+  gap: 16px;
+}
+
+.ai-form-assistant-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ai-form-assistant-prompt {
+  border: 1px solid var(--ai-assistant-accent);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ai-assistant-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  min-height: 24px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.ai-form-assistant-prompt:hover {
+  background: var(--ai-assistant-accent);
+  color: #fff;
+}
+
+.ai-form-assistant-prompt:focus-visible {
+  outline: 3px solid var(--ai-assistant-focus);
+  outline-offset: 2px;
+}
+
+.ai-form-assistant-messages {
+  display: grid;
+  gap: 14px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.ai-form-assistant-message {
+  min-width: 0;
+}
+
+.ai-form-assistant-message strong {
+  color: var(--ai-assistant-muted);
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+
+.ai-form-assistant-message-assistant strong {
+  color: var(--ai-assistant-accent);
+}
+
+.ai-form-assistant-message p {
+  color: var(--ai-assistant-ink);
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.ai-form-assistant-changes {
+  border: 1px solid var(--ai-assistant-line);
+  border-radius: 8px;
+  background: var(--ai-assistant-subtle-surface);
+  padding: 12px;
+}
+
+.ai-form-assistant-change {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.ai-form-assistant-change input {
+  accent-color: var(--ai-assistant-accent);
+  flex: 0 0 auto;
+  margin: 2px 0 0;
+}
+
+.ai-form-assistant-change span,
+.ai-form-assistant-change small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.ai-form-assistant-change-value {
+  font-size: 14px;
+}
+
+.ai-form-assistant-change small,
+.ai-form-assistant-status {
+  color: var(--ai-assistant-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ai-form-assistant-composer {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-form-assistant-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ai-form-assistant-composer textarea {
+  border: 1px solid var(--ai-assistant-line);
+  border-radius: 8px;
+  background: var(--ai-assistant-surface);
+  color: var(--ai-assistant-ink);
+  font: inherit;
+  min-height: 84px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.ai-form-assistant-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+@media (max-width: 480px) {
+  .ai-form-assistant-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
