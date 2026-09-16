@@ -38,9 +38,36 @@ const getFields = (contentType) => {
       config,
       label: config.label || name,
       inputType: config.inputType || 'text',
+      relationType: config.validation?.relationContenttype || null,
+      relationMultiple: Boolean(config.validation?.relationMultiple),
     };
     return fields;
   }, {});
+};
+
+const extractRelationId = (item) => {
+  if (typeof item === 'string') return item;
+  if (item && typeof item.dataUrl === 'string') {
+    return item.dataUrl.match(/[^/]+$/)?.[0] || null;
+  }
+  return null;
+};
+
+const getRelationCandidates = async (client, relationType) => {
+  try {
+    const response = await client[relationType]?.list({
+      limit: 20,
+      orderBy: 'internal.updatedAt',
+      orderDirection: 'desc',
+    });
+    const data = response?.body?.data || response?.data || [];
+    return data.map((object) => ({
+      id: object.id,
+      label: object.internal?.objectTitle || object.id,
+    }));
+  } catch {
+    return [];
+  }
 };
 
 const formatValue = (value) => {
@@ -48,6 +75,22 @@ const formatValue = (value) => {
   if (typeof value === 'string') return value || 'Empty';
 
   return JSON.stringify(value);
+};
+
+const formatFieldValue = (value, field, candidatesByType) => {
+  if (!field?.relationType) return formatValue(value);
+
+  const ids = (Array.isArray(value) ? value : [])
+    .map(extractRelationId)
+    .filter(Boolean);
+  if (!ids.length) return 'Empty';
+
+  const candidates = candidatesByType.get(field.relationType) || [];
+  return ids
+    .map(
+      (id) => candidates.find((candidate) => candidate.id === id)?.label || id,
+    )
+    .join(', ');
 };
 
 const isAllowedSelectValue = (value, config) => {
@@ -98,19 +141,47 @@ const isCompatibleValue = (value, schema, config) => {
   return typeof value === schema.type;
 };
 
-const getValidChanges = (changes, fields) =>
+const isValidRelationValue = (value, field, candidatesByType) => {
+  if (!Array.isArray(value)) return false;
+  if (!field.relationMultiple && value.length > 1) return false;
+
+  const candidateIds = new Set(
+    (candidatesByType.get(field.relationType) || []).map(
+      (candidate) => candidate.id,
+    ),
+  );
+  const ids = value.map(extractRelationId);
+  return ids.every((id) => id && candidateIds.has(id));
+};
+
+const toRelationValue = (value, field) =>
+  value.map((item) => ({
+    type: 'internal',
+    dataUrl: `/api/v1/content/${field.relationType}/${extractRelationId(item)}`,
+  }));
+
+const getValidChanges = (changes, fields, candidatesByType) =>
   Array.isArray(changes)
-    ? changes.filter(
-        (change) =>
-          change &&
-          typeof change.field === 'string' &&
-          fields[change.field] &&
-          isCompatibleValue(
-            change.value,
-            fields[change.field].schema,
-            fields[change.field].config,
-          ),
-      )
+    ? changes.reduce((valid, change) => {
+        if (!change || typeof change.field !== 'string') return valid;
+        const field = fields[change.field];
+        if (!field) return valid;
+
+        if (field.relationType) {
+          if (!isValidRelationValue(change.value, field, candidatesByType))
+            return valid;
+          valid.push({
+            ...change,
+            value: toRelationValue(change.value, field),
+          });
+          return valid;
+        }
+
+        if (!isCompatibleValue(change.value, field.schema, field.config))
+          return valid;
+        valid.push(change);
+        return valid;
+      }, [])
     : [];
 
 const valuesMatch = (currentValue, proposedValue) => {
@@ -123,13 +194,31 @@ const valuesMatch = (currentValue, proposedValue) => {
   }
 };
 
-const getApplicableChanges = (changes, fields, form) =>
-  getValidChanges(changes, fields).filter(
-    (change) => !valuesMatch(form.getValue(change.field), change.value),
+const relationValuesMatch = (currentValue, proposedValue) => {
+  const currentIds = (Array.isArray(currentValue) ? currentValue : [])
+    .map(extractRelationId)
+    .filter(Boolean);
+  const proposedIds = (Array.isArray(proposedValue) ? proposedValue : [])
+    .map(extractRelationId)
+    .filter(Boolean);
+  return (
+    currentIds.length === proposedIds.length &&
+    currentIds.every((id) => proposedIds.includes(id))
   );
+};
 
-const createAssistantChat = ({ context, globals }) => {
+const getApplicableChanges = (changes, fields, form, candidatesByType) =>
+  getValidChanges(changes, fields, candidatesByType).filter((change) => {
+    const field = fields[change.field];
+    const currentValue = form.getValue(change.field);
+    return field.relationType
+      ? !relationValuesMatch(currentValue, change.value)
+      : !valuesMatch(currentValue, change.value);
+  });
+
+const createAssistantChat = ({ context, globals, client }) => {
   const { data } = context;
+  const relationCandidatesCache = new Map();
   const chat = document.createElement('div');
   chat.className = 'ai-form-assistant-chat';
   chat.innerHTML = `
@@ -201,6 +290,7 @@ const createAssistantChat = ({ context, globals }) => {
       pendingChanges,
       fields,
       currentData.form,
+      relationCandidatesCache,
     );
     if (!pendingChanges.length) return;
 
@@ -221,9 +311,15 @@ const createAssistantChat = ({ context, globals }) => {
       const details = document.createElement('span');
       const value = document.createElement('span');
       value.className = 'ai-form-assistant-change-value';
-      const currentValue = formatValue(currentData.form.getValue(change.field));
-      value.textContent = `${field.label}: ${currentValue} -> ${formatValue(
+      const currentValue = formatFieldValue(
+        currentData.form.getValue(change.field),
+        field,
+        relationCandidatesCache,
+      );
+      value.textContent = `${field.label}: ${currentValue} -> ${formatFieldValue(
         change.value,
+        field,
+        relationCandidatesCache,
       )}`;
       const reason = document.createElement('small');
       reason.textContent = change.reason || 'Suggested by AI.';
@@ -246,6 +342,7 @@ const createAssistantChat = ({ context, globals }) => {
         selected.map((index) => pendingChanges[index]),
         latestFields,
         latestData.form,
+        relationCandidatesCache,
       );
       selectedChanges.forEach((change) =>
         latestData.form.setFieldValue(change.field, change.value),
@@ -283,10 +380,39 @@ const createAssistantChat = ({ context, globals }) => {
     try {
       const currentData = context.data;
       const fields = getFields(currentData.contentType);
+
+      await Promise.all(
+        Object.values(fields)
+          .filter(
+            (field) =>
+              field.relationType &&
+              !relationCandidatesCache.has(field.relationType),
+          )
+          .map(async (field) => {
+            relationCandidatesCache.set(
+              field.relationType,
+              await getRelationCandidates(client, field.relationType),
+            );
+          }),
+      );
+
+      const fieldsForRequest = Object.fromEntries(
+        Object.entries(fields).map(([name, field]) => [
+          name,
+          field.relationType
+            ? {
+                ...field,
+                candidates:
+                  relationCandidatesCache.get(field.relationType) || [],
+              }
+            : field,
+        ]),
+      );
+
       const response = await requestAssistantResponse({
         apiKey,
         formValues: currentData.form.getValues(),
-        fields,
+        fields: fieldsForRequest,
         message,
         model,
       });
@@ -298,6 +424,7 @@ const createAssistantChat = ({ context, globals }) => {
         response.changes,
         getFields(context.data.contentType),
         context.data.form,
+        relationCandidatesCache,
       );
       renderChanges();
       status.textContent = pendingChanges.length
@@ -315,12 +442,12 @@ const createAssistantChat = ({ context, globals }) => {
   return chat;
 };
 
-const createAssistantPanel = ({ context, globals }) => {
+const createAssistantPanel = ({ context, globals, client }) => {
   const panel = document.createElement('section');
   panel.className = 'ai-form-assistant-panel';
   const title = document.createElement('h2');
   title.textContent = 'AI Assistant';
-  const chat = createAssistantChat({ context, globals });
+  const chat = createAssistantChat({ context, globals, client });
   panel.append(title, chat);
   return panel;
 };
@@ -329,6 +456,7 @@ export const getOrCreateAssistantPanel = ({
   data,
   globals,
   pluginInfo,
+  client,
   createPanel = createAssistantPanel,
   getCached = getCachedElement,
   addToCache = addElementToCache,
@@ -343,13 +471,13 @@ export const getOrCreateAssistantPanel = ({
   }
 
   const context = { data };
-  const panel = createPanel({ context, globals });
+  const panel = createPanel({ context, globals, client });
   addToCache(panel, cacheKey, { context });
   return panel;
 };
 
-export const registerFormAssistant = (handler, globals, pluginInfo) => {
+export const registerFormAssistant = (handler, client, globals, pluginInfo) => {
   handler.on('flotiq.form.sidebar-panel::add', (data) => {
-    return getOrCreateAssistantPanel({ data, globals, pluginInfo });
+    return getOrCreateAssistantPanel({ data, globals, pluginInfo, client });
   });
 };
